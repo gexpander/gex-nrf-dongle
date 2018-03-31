@@ -81,6 +81,9 @@ void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
+void MX_USART_DmaWaitReady(void);
+void MX_USART_DmaSend(uint8_t *buffer, uint32_t length);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

@@ -64,6 +64,9 @@
 #include "stm32f1xx_ll_usart.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_ll_gpio.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <inttypes.h>
 
 /* USER CODE BEGIN Includes */
 

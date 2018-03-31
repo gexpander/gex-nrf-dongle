@@ -48,6 +48,7 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <inttypes.h>
 #include "usbd_core.h"
 #include "usbd_desc.h"
 #include "usbd_conf.h"
@@ -91,10 +92,10 @@
   * @{
   */
 
-#define USBD_VID     4617
+#define USBD_VID     0x1209
 #define USBD_LANGID_STRING     1033
-#define USBD_MANUFACTURER_STRING     "STMicroelectronics"
-#define USBD_PID_FS     19553
+#define USBD_MANUFACTURER_STRING     "MightyPork"
+#define USBD_PID_FS     0x4c61
 #define USBD_PRODUCT_STRING_FS     "GEX wireless dongle"
 #define USBD_SERIALNUMBER_STRING_FS     "00000000001A"
 #define USBD_CONFIGURATION_STRING_FS     "CDC Config"
@@ -290,14 +291,14 @@ uint8_t * USBD_FS_ManufacturerStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *l
   */
 uint8_t * USBD_FS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
 {
-  if(speed == USBD_SPEED_HIGH)
-  {
-    USBD_GetString((uint8_t *)USBD_SERIALNUMBER_STRING_FS, USBD_StrDesc, length);
-  }
-  else
-  {
-    USBD_GetString((uint8_t *)USBD_SERIALNUMBER_STRING_FS, USBD_StrDesc, length);
-  }
+  char buff[27];
+  sprintf(buff, "%08"PRIX32"-%08"PRIX32"-%08"PRIX32,
+      LL_GetUID_Word0(),
+      LL_GetUID_Word1(),
+      LL_GetUID_Word2()
+  );
+
+  USBD_GetString ((uint8_t *) &buff[0], USBD_StrDesc, length);
   return USBD_StrDesc;
 }
 

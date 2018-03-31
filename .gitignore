@@ -85,3 +85,5 @@ cmake-build-*
 /disassembly.lst
 /main.ram.map
 build/*
+.dep/
+

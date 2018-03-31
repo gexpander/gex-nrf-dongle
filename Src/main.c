@@ -47,6 +47,7 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
+#include <gex_gateway.h>
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "dma.h"
@@ -54,6 +55,7 @@
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
+#include "debug.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -105,25 +107,32 @@ int main(void)
 
   /* USER CODE END SysInit */
 
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOC);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOD);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
+
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_USB_DEVICE_Init();
-  MX_SPI1_Init();
-  MX_USART1_UART_Init();
+      MX_GPIO_Init();
+      MX_DMA_Init();
+      MX_USB_DEVICE_Init();
+      MX_SPI1_Init();
+      MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
+    dbg("Main loop starts.");
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+    int cnt = 0;
   while (1)
   {
+    if (cnt++ > 10000) {
+      GPIOC->ODR ^= (1 << 13);
+      cnt = 0;
+    }
 
-  /* USER CODE END WHILE */
-
-  /* USER CODE BEGIN 3 */
-
+    gw_process();
   }
   /* USER CODE END 3 */
 

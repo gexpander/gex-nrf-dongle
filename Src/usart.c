@@ -49,6 +49,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include <stdbool.h>
 
 #include "gpio.h"
 #include "dma.h"
@@ -77,12 +78,13 @@ void MX_USART1_UART_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_FLOATING;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  // we don't use Rx
+//  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
+//  GPIO_InitStruct.Mode = LL_GPIO_MODE_FLOATING;
+//  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USART1 DMA Init */
-  
+
   /* USART1_TX Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 
@@ -98,6 +100,9 @@ void MX_USART1_UART_Init(void)
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_BYTE);
 
+  // the USART address
+  LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_4, LL_USART_DMA_GetRegAddr(USART1));
+
   USART_InitStruct.BaudRate = 115200;
   USART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
   USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
@@ -109,10 +114,35 @@ void MX_USART1_UART_Init(void)
   LL_USART_ConfigAsyncMode(USART1);
 
   LL_USART_Enable(USART1);
-
 }
 
+
 /* USER CODE BEGIN 1 */
+static volatile bool usart_dma_first = true;
+/** Wait for the last DMA request to finish - so the buffer can be re-filled with new content */
+void MX_USART_DmaWaitReady(void)
+{
+    if (!usart_dma_first) {
+        // wait for the last transfer to finish
+        while (!LL_DMA_IsActiveFlag_TC4(DMA1));
+    }
+
+    LL_USART_DisableDMAReq_TX(USART1);
+}
+
+/** Send new content using DMA */
+void MX_USART_DmaSend(uint8_t *buffer, uint32_t length)
+{
+    usart_dma_first = false;
+
+    LL_USART_EnableDMAReq_TX(USART1);
+
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_4);
+    LL_DMA_ClearFlag_TC4(DMA1);
+    LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_4, (uint32_t) buffer);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_4, length);
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_4);
+}
 
 /* USER CODE END 1 */
 
