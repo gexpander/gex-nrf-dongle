@@ -49,6 +49,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <debug.h>
+#include <msg_queue.h>
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
@@ -295,7 +296,12 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  //
+  // queue the frame
+  dbg("USB rx frame");
+  bool suc = mq_post(&usb_rxq, Buf, *Len);
+  if (!suc) {
+    dbg("USB rxq overrun!");
+  }
 
   return (USBD_OK);
   /* USER CODE END 6 */

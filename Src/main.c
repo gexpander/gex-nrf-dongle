@@ -48,6 +48,7 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include <gex_gateway.h>
+#include <msg_queue.h>
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "dma.h"
@@ -122,12 +123,15 @@ int main(void)
   /* USER CODE END 2 */
     dbg("Main loop starts.");
 
+    mq_init(&usb_rxq);
+    mq_init(&usb_txq);
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     int cnt = 0;
   while (1)
   {
-    if (cnt++ > 10000) {
+    if (cnt++ > 100000) {
       GPIOC->ODR ^= (1 << 13);
       cnt = 0;
     }

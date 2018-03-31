@@ -32,7 +32,7 @@ enum GW_CMD {
     CMD_MSG4SLAVE = 'm', // 109
 };
 
-void respond_gw_id(); // TODO impl
+void respond_gw_id() {} // TODO impl
 
 void start_slave_cmd(uint8_t slave_addr, uint16_t frame_len, uint8_t cksum)
 {
@@ -47,6 +47,7 @@ void gw_process(void)
 {
     static uint8_t buffer[MQ_SLOT_LEN];
     while (mq_read(&usb_rxq, buffer)) { // greedy - handle as many as possible
+        dbg("Handling frame.");
         if (urx_state == URXS_IDLE) {
             PayloadParser pp = pp_start(buffer, MQ_SLOT_LEN, NULL);
 
@@ -55,7 +56,7 @@ void gw_process(void)
             // magic twice, one inverted - denotes a gateway command
             uint16_t magic1 = pp_u8(&pp);
             uint16_t magic2 = pp_u8(&pp);
-            if (magic1 == MAGIC_GW_COMMAND && magic2 == ~MAGIC_GW_COMMAND) {
+            if (magic1 == MAGIC_GW_COMMAND && magic2 == (0xFFU & (~MAGIC_GW_COMMAND))) {
                 // third byte is the command code
                 switch (pp_u8(&pp)) {
                     case CMD_GET_ID:
@@ -67,7 +68,7 @@ void gw_process(void)
                         uint16_t frame_len = pp_u16(&pp);
                         uint8_t cksum = pp_u8(&pp);
 
-                        if (frame_len > MAX_FRAME_LEN) {
+                        if (frame_len == 0 || frame_len > MAX_FRAME_LEN) {
                             dbg("Frame too big!");
                             break;
                         }
@@ -76,10 +77,13 @@ void gw_process(void)
                         dbg("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
                         urx_state = URXS_MSG4SLAVE;
                         break;
+
+                    default:
+                        dbg("Bad cmd");
                 }
             } else {
                 // Bad frame??
-                dbg("Bad USB frame, starts %x", buffer[0]);
+                dbg("Bad USB frame, starts %x,%x", buffer[0],buffer[1]);
             }
         }
         else if (urx_state == URXS_MSG4SLAVE) {
