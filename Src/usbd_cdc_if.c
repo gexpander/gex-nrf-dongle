@@ -50,6 +50,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include <debug.h>
 #include <msg_queue.h>
+#include <gex_gateway.h>
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
@@ -298,10 +299,15 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 
   // queue the frame
   dbg("USB rx frame");
-  bool suc = mq_post(&usb_rxq, Buf, *Len);
-  if (!suc) {
-    dbg("USB rxq overrun!");
-  }
+  gw_handle_usb_out(Buf); // this expects full 64byte frames always starting with magic or useful data
+
+  // handled immediately in the interrupt to block USB (NAK)
+
+//
+//  bool suc = mq_post(&usb_rxq, Buf, *Len);
+//  if (!suc) {
+//    dbg("USB rxq overrun!");
+//  }
 
   return (USBD_OK);
   /* USER CODE END 6 */
@@ -335,6 +341,8 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+// TODO add Tx Done notify
 
 /**
   * @}
