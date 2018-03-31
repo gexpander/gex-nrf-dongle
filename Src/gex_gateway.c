@@ -44,7 +44,6 @@ void start_slave_cmd(uint8_t slave_addr, uint16_t frame_len, uint8_t cksum)
 
 void gw_handle_usb_out(uint8_t *buffer)
 {
-    dbg("Handling frame.");
     if (urx_state == URXS_IDLE) {
         PayloadParser pp = pp_start(buffer, MQ_SLOT_LEN, NULL);
 

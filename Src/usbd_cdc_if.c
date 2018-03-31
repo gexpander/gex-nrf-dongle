@@ -298,7 +298,6 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
   // queue the frame
-  dbg("USB rx frame");
   gw_handle_usb_out(Buf); // this expects full 64byte frames always starting with magic or useful data
 
   // handled immediately in the interrupt to block USB (NAK)
