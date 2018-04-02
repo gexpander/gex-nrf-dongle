@@ -9,8 +9,7 @@
 #include "msg_queue.h"
 
 // the two USB messaging queues
-MQueue usb_rxq;
-MQueue usb_txq;
+MQueue usb_inq;
 
 void mq_init(MQueue *mq)
 {

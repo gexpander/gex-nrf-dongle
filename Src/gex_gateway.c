@@ -9,49 +9,61 @@
 #include "main.h"
 #include "minmax.h"
 #include "payload_parser.h"
+#include "nrf.h"
+#include "crc32.h"
+#include "payload_builder.h"
+
+static uint8_t gex_network[4];
 
 // USB RX
-enum URX_STATE {
-    URXS_IDLE = 0,
-    URXS_MSG4SLAVE = 1,
+enum USB_RX_STATE {
+    CMD_STATE_IDLE = 0,
+    CMD_STATE_TXMSG = 1,
 };
 
 #define MAX_FRAME_LEN 512
 
-static enum URX_STATE urx_state = URXS_IDLE;
-static uint32_t msg4slave_len = 0; // total len to be collected
-static uint32_t msg4slave_already = 0; // already collected len
-static uint8_t  msg4slave[MAX_FRAME_LEN]; // equal buffer size in GEX
-static uint8_t msg4slave_addr = 0;
-static uint8_t msg4slave_cksum = 0;
+static enum USB_RX_STATE cmd_state = CMD_STATE_IDLE;
+
+static uint32_t txmsg_len = 0; // total len to be collected
+static uint32_t txmsg_collected = 0; // already collected len
+static uint8_t  txmsg_payload[MAX_FRAME_LEN]; // equal buffer size in GEX
+static uint8_t txmsg_addr = 0;
+static uint8_t txmsg_cksum = 0;
 
 #define MAGIC_GW_COMMAND 0x47U // 'G'
 
 enum GW_CMD {
-    CMD_GET_ID = 'i', // 105
-    CMD_MSG4SLAVE = 'm', // 109
+    CMD_GET_ID = 'i', // 105 - get network ID
+    CMD_RESET = 'r', // reset the radio and network
+    CMD_ADD_NODE = 'n', // add a node by address byte
+    CMD_TXMSG = 'm', // 109 - send a message
 };
 
-void respond_gw_id() {} // TODO impl
+void respond_gw_id(void);
+
+void handle_cmd_addnode(PayloadParser *pp);
+
+void handle_cmd_reset(void);
 
 void start_slave_cmd(uint8_t slave_addr, uint16_t frame_len, uint8_t cksum)
 {
-    msg4slave_len = frame_len;
-    msg4slave_already = 0;
-    msg4slave_addr = slave_addr;
-    msg4slave_cksum = cksum;
+    txmsg_len = frame_len;
+    txmsg_collected = 0;
+    txmsg_addr = slave_addr;
+    txmsg_cksum = cksum;
 }
 
 void gw_handle_usb_out(uint8_t *buffer)
 {
-    if (urx_state == URXS_IDLE) {
+    if (cmd_state == CMD_STATE_IDLE) {
         PayloadParser pp = pp_start(buffer, MQ_SLOT_LEN, NULL);
 
         // handle binary commands for the gateway
 
         // magic twice, one inverted - denotes a gateway command
-        uint16_t magic1 = pp_u8(&pp);
-        uint16_t magic2 = pp_u8(&pp);
+        const uint16_t magic1 = pp_u8(&pp);
+        const uint16_t magic2 = pp_u8(&pp);
         if (magic1 == MAGIC_GW_COMMAND && magic2 == (0xFFU & (~MAGIC_GW_COMMAND))) {
             // third byte is the command code
             switch (pp_u8(&pp)) {
@@ -59,7 +71,15 @@ void gw_handle_usb_out(uint8_t *buffer)
                     respond_gw_id();
                     break;
 
-                case CMD_MSG4SLAVE:;
+                case CMD_RESET:
+                    handle_cmd_reset();
+                    break;
+
+                case CMD_ADD_NODE:
+                    handle_cmd_addnode(&pp);
+                    break;
+
+                case CMD_TXMSG:;
                     uint8_t slave_addr = pp_u8(&pp);
                     uint16_t frame_len = pp_u16(&pp);
                     uint8_t cksum = pp_u8(&pp);
@@ -71,7 +91,7 @@ void gw_handle_usb_out(uint8_t *buffer)
 
                     start_slave_cmd(slave_addr, frame_len, cksum);
                     dbg("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
-                    urx_state = URXS_MSG4SLAVE;
+                    cmd_state = CMD_STATE_TXMSG;
                     break;
 
                 default:
@@ -82,38 +102,96 @@ void gw_handle_usb_out(uint8_t *buffer)
             dbg("Bad USB frame, starts %x,%x", buffer[0],buffer[1]);
         }
     }
-    else if (urx_state == URXS_MSG4SLAVE) {
-        uint32_t wanted = MIN(msg4slave_len-msg4slave_already, MQ_SLOT_LEN);
-        memcpy(&msg4slave[msg4slave_already], buffer, wanted);
-        msg4slave_already += wanted;
+    else if (cmd_state == CMD_STATE_TXMSG) {
+        uint32_t wanted = MIN(txmsg_len - txmsg_collected, MQ_SLOT_LEN);
+        memcpy(&txmsg_payload[txmsg_collected], buffer, wanted);
+        txmsg_collected += wanted;
 
         if (wanted < MQ_SLOT_LEN) {
             // this was the end
             uint8_t ck = 0;
-            for (int i = 0; i < msg4slave_len; i++) {
-                ck ^= msg4slave[i];
+            for (int i = 0; i < txmsg_len; i++) {
+                ck ^= txmsg_payload[i];
             }
             ck = ~ck;
 
-            if (ck != msg4slave_cksum) {
+            if (ck != txmsg_cksum) {
                 dbg("Checksum mismatch!");
             }
             else {
-                dbg("Verified, sending a %d B frame to slave.", (int) msg4slave_len);
+                dbg("Verified, sending a %d B frame to slave.", (int) txmsg_len);
                 // TODO send to slave
             }
 
-            urx_state = URXS_IDLE;
+            cmd_state = CMD_STATE_IDLE;
         }
     }
 }
 
-/** called from the main loop, periodically */
-void gw_process(void)
+void handle_cmd_reset(void)
 {
-//    static uint8_t buffer[MQ_SLOT_LEN];
-//    while (mq_read(&usb_rxq, buffer)) { // greedy - handle as many as possible
-//        gw_handle_usb_out(buffer);
-//    }
+    NRF_Reset();
+    // TODO also clear queues?
 }
 
+void handle_cmd_addnode(PayloadParser *pp)
+{
+    uint8_t node = pp_u8(pp);
+    uint8_t pipenum;
+    bool suc = NRF_AddPipe(node, &pipenum);
+    if (!suc) dbg("Failed to add node.");
+    // TODO response
+}
+
+void respond_gw_id(void)
+{
+    // TODO implement (after response system is added)
+}
+
+/**
+ * Compute the GEX network ID based on the gateway MCU unique ID.
+ * The ID is a 4-byte code that must be entered in each node to join the network.
+ */
+static void compute_network_id(void)
+{
+    uint8_t uid[12];
+    PayloadBuilder pb = pb_start(uid, 12, NULL);
+    pb_u32(&pb, LL_GetUID_Word0());
+    pb_u32(&pb, LL_GetUID_Word1());
+    pb_u32(&pb, LL_GetUID_Word2());
+
+    uint32_t ck = CRC32_Start();
+    for (int i = 0; i < 12; i++) {
+        ck = CRC32_Add(ck, uid[i]);
+    }
+    ck = CRC32_End(ck);
+
+    pb = pb_start(gex_network, 4, NULL);
+    pb_u32(&pb, ck);
+
+    dbg("Dongle network ID: %02X-%02X-%02X-%02X",
+        gex_network[0], gex_network[1], gex_network[2], gex_network[3]);
+}
+
+void gw_setup_radio(void)
+{
+    bool suc;
+    dbg("Init NRF");
+
+    NRF_Init(NRF_SPEED_2M);
+
+    compute_network_id();
+    NRF_SetBaseAddress(gex_network);
+
+    // TODO by config
+    uint8_t pipenum;
+    suc = NRF_AddPipe(0x01, &pipenum);
+    dbg("Pipe added? %d, num %d", (int)suc, (int)pipenum);
+
+    NRF_ModeRX(); // base state is RX
+
+    dbg("Send a packet");
+
+    suc = NRF_SendPacket(pipenum, (uint8_t *) "AHOJ", 5);
+    dbg("Suc? %d", (int)suc);
+}

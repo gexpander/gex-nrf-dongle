@@ -82,7 +82,7 @@ void MX_GPIO_Init(void)
   LL_GPIO_ResetOutputPin(LED_GPIO_Port, LED_Pin);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOA, NRF_CE_Pin|NRF_NSS_Pin);
+//  LL_GPIO_ResetOutputPin(GPIOA, NRF_CE_Pin|NRF_NSS_Pin);
 
   /**/
   GPIO_InitStruct.Pin = LED_Pin;
@@ -98,6 +98,7 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+#if 0
   /**/
   LL_GPIO_AF_SetEXTISource(LL_GPIO_AF_EXTI_PORTA, LL_GPIO_AF_EXTI_LINE2);
 
@@ -110,6 +111,7 @@ void MX_GPIO_Init(void)
 
   /**/
   LL_GPIO_SetPinMode(NRF_IRQ_GPIO_Port, NRF_IRQ_Pin, LL_GPIO_MODE_FLOATING);
+#endif
 
 }
 

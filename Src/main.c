@@ -47,8 +47,6 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#include <gex_gateway.h>
-#include <msg_queue.h>
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "dma.h"
@@ -57,6 +55,8 @@
 #include "usb_device.h"
 #include "gpio.h"
 #include "debug.h"
+#include "gex_gateway.h"
+#include "msg_queue.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -121,23 +121,21 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
+
+    gw_setup_radio();
+    mq_init(&usb_inq);
+
     dbg("Main loop starts.");
-
-    mq_init(&usb_rxq);
-    mq_init(&usb_txq);
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     int cnt = 0;
-  while (1)
-  {
-    if (cnt++ > 100000) {
-      GPIOC->ODR ^= (1 << 13);
-      cnt = 0;
+    while (1) {
+        if (cnt++ > 4000000) {
+            LL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+//      GPIOC->ODR ^= (1 << 13);
+            cnt = 0;
+        }
     }
-
-    gw_process();
-  }
   /* USER CODE END 3 */
 
 }

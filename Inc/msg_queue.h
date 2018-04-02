@@ -21,8 +21,7 @@ typedef struct {
     volatile uint32_t nw;
 } MQueue;
 
-extern MQueue usb_rxq;
-extern MQueue usb_txq;
+extern MQueue usb_inq;
 
 void mq_init(MQueue *mq);
 

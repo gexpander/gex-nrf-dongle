@@ -82,7 +82,8 @@ void MX_SPI1_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* SPI1 DMA Init */
-  
+
+#if 0
   /* SPI1_RX Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
@@ -112,6 +113,7 @@ void MX_SPI1_Init(void)
   LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_BYTE);
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_BYTE);
+#endif
 
   SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
   SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
@@ -125,6 +127,7 @@ void MX_SPI1_Init(void)
   SPI_InitStruct.CRCPoly = 10;
   LL_SPI_Init(SPI1, &SPI_InitStruct);
 
+  LL_SPI_Enable(SPI1);
 }
 
 /* USER CODE BEGIN 1 */

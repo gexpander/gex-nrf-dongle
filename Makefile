@@ -67,6 +67,8 @@ Src/msg_queue.c \
 Src/gex_gateway.c \
 Src/payload_builder.c \
 Src/payload_parser.c \
+Src/nrf.c \
+Src/crc32.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c \
