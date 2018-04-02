@@ -108,7 +108,7 @@ void gw_handle_usb_out(uint8_t *buffer)
         txmsg_collected += wanted;
 
         if (wanted < MQ_SLOT_LEN) {
-            // this was the end
+            // this was the end - simple checksum to verify it's a valid frame
             uint8_t ck = 0;
             for (int i = 0; i < txmsg_len; i++) {
                 ck ^= txmsg_payload[i];
@@ -120,7 +120,23 @@ void gw_handle_usb_out(uint8_t *buffer)
             }
             else {
                 dbg("Verified, sending a %d B frame to slave.", (int) txmsg_len);
-                // TODO send to slave
+
+                uint8_t pipe = NRF_Addr2PipeNum(txmsg_addr);
+                if (pipe == 0xFF) {
+                    dbg("Bad slave num!");
+                } else {
+                    uint32_t remain = txmsg_len;
+                    for (int i = 0; i <= txmsg_len/32; i++) {
+                        uint8_t chunk = (uint8_t) MIN(remain, 32);
+                        bool suc = NRF_SendPacket(pipe, &txmsg_payload[i*32], chunk);
+                        remain -= chunk;
+
+                        if (!suc) {
+                            dbg("Sending failed."); // (even with retransmission)
+                            break; // skip rest of the frame
+                        }
+                    }
+                }
             }
 
             cmd_state = CMD_STATE_IDLE;
