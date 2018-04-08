@@ -82,6 +82,8 @@ void SystemClock_Config(void);
 
 /* USER CODE END 0 */
 
+extern void EXTI2_IRQHandler(void);
+
 /**
   * @brief  The application entry point.
   *
@@ -130,16 +132,19 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     int cnt = 0;
+    uint8_t buff[MQ_SLOT_LEN];
+
     while (1) {
         if (cnt++ > 500000) {
             LL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
             cnt = 0;
         }
 
-        uint8_t buff[MQ_SLOT_LEN];
-        if (!usb_tx_busy && mq_can_read(&usb_inq)) {
-            mq_read(&usb_inq, buff);
-            CDC_Transmit_FS(buff, MQ_SLOT_LEN);
+        if (mq_can_read(&usb_inq)) {
+            if (!usb_tx_busy) {
+                mq_read(&usb_inq, buff);
+                CDC_Transmit_FS(buff, MQ_SLOT_LEN);
+            }
         }
     }
   /* USER CODE END 3 */

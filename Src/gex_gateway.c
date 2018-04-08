@@ -86,10 +86,10 @@ void handle_txframe_chunk(const uint8_t *buffer, uint16_t size)
         ck = ~ck;
 
         if (ck != txmsg_cksum) {
-            dbg("Checksum mismatch!");
+            dbg("Checksum from usb master mismatch!");
         }
         else {
-            dbg("Verified, sending a %d B frame to slave.", (int) txmsg_len);
+            dbg_nrf("Verified, sending a %d B frame to slave.", (int) txmsg_len);
 
             uint8_t pipe = NRF_Addr2PipeNum(txmsg_addr);
             if (pipe == 0xFF) {
@@ -102,9 +102,12 @@ void handle_txframe_chunk(const uint8_t *buffer, uint16_t size)
                     remain -= chunk;
 
                     if (!suc) {
-                        dbg("Sending failed."); // (even with retransmission)
+                        dbg("Sending failed, discard rest");
                         break; // skip rest of the frame
                     }
+                }
+                if (remain == 0) {
+                    dbg_nrf("Sending completed. Is Rx ready? %d", (int)NRF_IsRxPacket());
                 }
             }
         }
@@ -152,7 +155,7 @@ void gw_handle_usb_out(uint8_t *buffer)
                     }
 
                     start_slave_cmd(slave_addr, frame_len, cksum);
-                    dbg("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
+                    dbg_nrf("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
                     cmd_state = CMD_STATE_TXMSG;
 
                     // handle the rest as payload
@@ -189,14 +192,14 @@ void handle_cmd_addnodes(PayloadParser *pp)
         if (!suc) {
             dbg("Failed to add node.");
         } else {
-            dbg("Bound node %02x to pipe %d", node, pipenum);
+            dbg_nrf("Bound node %02x to pipe %d", node, pipenum);
         }
     }
 }
 
 void respond_gw_id(void)
 {
-    dbg("> respond_gw_id");
+    dbg_nrf("> respond_gw_id");
     struct msg_network_id m = {
         .msg_type = MSG_TYPE_NETWORK_ID,
         .bytes = {
@@ -234,39 +237,27 @@ static void compute_network_id(void)
     pb = pb_start(gex_network, 4, NULL);
     pb_u32(&pb, ck);
 
-    dbg("Dongle network ID: %02X-%02X-%02X-%02X",
+    dbg("Gateway network ID: %02X-%02X-%02X-%02X",
         gex_network[0], gex_network[1], gex_network[2], gex_network[3]);
 }
 
 void gw_setup_radio(void)
 {
-    bool suc;
     dbg("Init NRF");
 
     NRF_Init(NRF_SPEED_2M);
 
     compute_network_id();
     NRF_SetBaseAddress(gex_network);
-
-    // TODO by config
-    uint8_t pipenum;
-    suc = NRF_AddPipe(0x01, &pipenum);
-    dbg("Pipe added? %d, num %d", (int)suc, (int)pipenum);
-
     NRF_ModeRX(); // base state is RX
-
-//    dbg("Send a packet");
-//
-//    suc = NRF_SendPacket(pipenum, (uint8_t *) "AHOJ", 5);
-//    dbg("Suc? %d", (int)suc);
 }
 
 void EXTI2_IRQHandler(void)
 {
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
+
     struct msg_data m;
     m.msg_type = MSG_TYPE_DATA;
-
-    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
 
     uint8_t pipenum;
     m.length = NRF_ReceivePacket(m.data, &pipenum);
@@ -274,7 +265,7 @@ void EXTI2_IRQHandler(void)
         dbg("IRQ but no msg!");
     }
     else {
-        dbg("Msg RXd from nordic!");
+        dbg_nrf("Msg RXd from nordic!");
 
         m.dev_addr = NRF_PipeNum2Addr(pipenum);
 

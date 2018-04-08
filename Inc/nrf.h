@@ -21,6 +21,9 @@
 
 #include "main.h"
 
+#define dbg_nrf(...) do{}while(0)
+//#define dbg_nrf(...) dbg(##__VA_ARGS__)
+
 // Initialize SPI and the Nordic
 
 /**
