@@ -654,6 +654,8 @@ static uint8_t  USBD_CDC_Setup (USBD_HandleTypeDef *pdev,
   return USBD_OK;
 }
 
+extern void USBD_CDC_TransmitDone(USBD_HandleTypeDef *pdev);
+
 /**
   * @brief  USBD_CDC_DataIn
   *         Data sent on non-control IN endpoint
@@ -669,6 +671,8 @@ static uint8_t  USBD_CDC_DataIn (USBD_HandleTypeDef *pdev, uint8_t epnum)
   {
     
     hcdc->TxState = 0;
+
+    USBD_CDC_TransmitDone(pdev);
 
     return USBD_OK;
   }

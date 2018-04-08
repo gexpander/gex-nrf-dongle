@@ -118,6 +118,8 @@
 /** CDC Interface callback. */
 extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
+extern volatile bool usb_tx_busy;
+
 /* USER CODE BEGIN EXPORTED_VARIABLES */
 
 /* USER CODE END EXPORTED_VARIABLES */
@@ -132,6 +134,8 @@ extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
   */
 
 uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
+
+void USBD_CDC_TransmitDone(USBD_HandleTypeDef *pdev);
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
 

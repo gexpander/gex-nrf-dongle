@@ -57,6 +57,7 @@
 #include "debug.h"
 #include "gex_gateway.h"
 #include "msg_queue.h"
+#include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -130,10 +131,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     int cnt = 0;
     while (1) {
-        if (cnt++ > 4000000) {
+        if (cnt++ > 500000) {
             LL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-//      GPIOC->ODR ^= (1 << 13);
             cnt = 0;
+        }
+
+        uint8_t buff[MQ_SLOT_LEN];
+        if (!usb_tx_busy && mq_can_read(&usb_inq)) {
+            mq_read(&usb_inq, buff);
+            CDC_Transmit_FS(buff, MQ_SLOT_LEN);
         }
     }
   /* USER CODE END 3 */

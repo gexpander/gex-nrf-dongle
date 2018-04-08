@@ -102,9 +102,9 @@ uint8_t NRF_PipeNum2Addr(uint8_t pipe_num);
 uint8_t NRF_Addr2PipeNum(uint8_t addr);
 
 /**
- * Reset as much as possible (incl. removing pipes)
+ * Reset pipes, so we can add them again
  */
-void NRF_Reset(void);
+void NRF_ResetPipes(void);
 
 /**
  * Send a packet (takes care of mode switching etc)

@@ -117,6 +117,8 @@
   * @}
   */
 
+volatile bool usb_tx_busy = false;
+
 /** @defgroup USBD_CDC_IF_Private_Variables USBD_CDC_IF_Private_Variables
   * @brief Private variables.
   * @{
@@ -331,6 +333,8 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
   if (hcdc->TxState != 0){
     return USBD_BUSY;
   }
+
+  usb_tx_busy = true;
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
   result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
   /* USER CODE END 7 */
@@ -341,7 +345,10 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
-// TODO add Tx Done notify
+void USBD_CDC_TransmitDone(USBD_HandleTypeDef *pdev)
+{
+  usb_tx_busy = false;
+}
 
 /**
   * @}
