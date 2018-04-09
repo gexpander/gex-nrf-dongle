@@ -5,6 +5,7 @@
 #include "main.h"
 #include <stdbool.h>
 #include <string.h>
+#include <msg_queue.h>
 #include "debug.h"
 #include "msg_queue.h"
 
@@ -13,12 +14,19 @@ MQueue usb_inq;
 
 void mq_init(MQueue *mq)
 {
+    mq->nw = 0;
     mq->lr = MQ_LEN-1;
 }
 
 bool mq_can_post(MQueue *mq)
 {
     return mq->nw != mq->lr;
+}
+
+void mq_reset(MQueue *mq)
+{
+    mq_init(mq);
+    memset(mq->slots, 0, sizeof(mq->slots));
 }
 
 bool mq_post(MQueue *mq, const uint8_t *buffer, uint32_t len)
