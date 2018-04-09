@@ -511,7 +511,7 @@ void NRF_Init(uint8_t pSpeed)
     NRF_WriteRegister(RG_EN_RXADDR, 0x01); // disable all except 1 which we'll assign later
 
     NRF_WriteRegister(RG_SETUP_RETR, 0x18);        // 8 retries, 500 ms
-    NRF_WriteRegister(RG_RF_CH, 7);                // channel 2 NO HIGHER THAN 83 in USA!
+    NRF_WriteRegister(RG_RF_CH, 76);                // channel
 
     NRF_WriteRegister(RG_RF_SETUP, pSpeed);
 
