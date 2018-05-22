@@ -91,52 +91,61 @@ extern void EXTI2_IRQHandler(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+    /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+    /* USER CODE END 1 */
 
-  /* MCU Configuration----------------------------------------------------------*/
+    /* MCU Configuration----------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+    HAL_Init();
 
-  /* USER CODE BEGIN Init */
+    /* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+    /* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+    /* Configure the system clock */
+    SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+    /* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+    /* USER CODE END SysInit */
 
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOC);
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOD);
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
 
-  /* Initialize all configured peripherals */
-      MX_GPIO_Init();
-      MX_DMA_Init();
-      MX_USB_DEVICE_Init();
-      MX_SPI1_Init();
-      MX_USART1_UART_Init();
-  /* USER CODE BEGIN 2 */
+    /* Initialize all configured peripherals */
+    MX_GPIO_Init();
+    MX_DMA_Init();
+    MX_USB_DEVICE_Init();
+    MX_SPI1_Init();
+    MX_USART1_UART_Init();
+    /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
+    /* USER CODE END 2 */
 
     gw_setup_radio();
     mq_init(&usb_inq);
 
+    // re-enumerate USB
+    LL_GPIO_SetOutputPin(RENUM_GPIO_Port, RENUM_Pin);
+    LL_mDelay(100);
+    LL_GPIO_ResetOutputPin(RENUM_GPIO_Port, RENUM_Pin);
+
     dbg("Main loop starts.");
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+    /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
     int cnt = 0;
     uint8_t buff[MQ_SLOT_LEN];
 
     while (1) {
-        if (cnt++ > 500000) {
-            LL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        cnt++;
+        if (cnt > 1400000) {
+            LL_GPIO_SetOutputPin(LED_GPIO_Port, LED1_Pin);
+        }
+        if (cnt > 1500000) {
+            LL_GPIO_ResetOutputPin(LED_GPIO_Port, LED1_Pin);
             cnt = 0;
         }
 
@@ -144,10 +153,13 @@ int main(void)
             if (!usb_tx_busy) {
                 mq_read(&usb_inq, buff);
                 CDC_Transmit_FS(buff, MQ_SLOT_LEN);
+
+                // blinking - maybe this will work .. not sure
+                LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDRX_Pin);
             }
         }
     }
-  /* USER CODE END 3 */
+    /* USER CODE END 3 */
 
 }
 
@@ -158,51 +170,47 @@ int main(void)
 void SystemClock_Config(void)
 {
 
-  LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
+    LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
 
-   if(LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)
-  {
-    Error_Handler();  
-  }
-  LL_RCC_HSE_Enable();
+    if (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2) {
+        Error_Handler();
+    }
+    LL_RCC_HSE_Enable();
 
-   /* Wait till HSE is ready */
-  while(LL_RCC_HSE_IsReady() != 1)
-  {
-    
-  }
-  LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
+    /* Wait till HSE is ready */
+    while (LL_RCC_HSE_IsReady() != 1) {
 
-  LL_RCC_PLL_Enable();
+    }
+    LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
 
-   /* Wait till PLL is ready */
-  while(LL_RCC_PLL_IsReady() != 1)
-  {
-    
-  }
-  LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
+    LL_RCC_PLL_Enable();
 
-  LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_2);
+    /* Wait till PLL is ready */
+    while (LL_RCC_PLL_IsReady() != 1) {
 
-  LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
+    }
+    LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
 
-  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
+    LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_2);
 
-   /* Wait till System clock is ready */
-  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
-  {
-  
-  }
-  LL_Init1msTick(72000000);
+    LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
 
-  LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
+    LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
 
-  LL_SetSystemCoreClock(72000000);
+    /* Wait till System clock is ready */
+    while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL) {
 
-  LL_RCC_SetUSBClockSource(LL_RCC_USB_CLKSOURCE_PLL_DIV_1_5);
+    }
+    LL_Init1msTick(72000000);
 
-  /* SysTick_IRQn interrupt configuration */
-  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+    LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
+
+    LL_SetSystemCoreClock(72000000);
+
+    LL_RCC_SetUSBClockSource(LL_RCC_USB_CLKSOURCE_PLL_DIV_1_5);
+
+    /* SysTick_IRQn interrupt configuration */
+    NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
 }
 
 /* USER CODE BEGIN 4 */
@@ -217,15 +225,15 @@ void SystemClock_Config(void)
   */
 void _Error_Handler(char *file, int line)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  while(1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+    /* USER CODE BEGIN Error_Handler_Debug */
+    /* User can add his own implementation to report the HAL error return state */
+    while (1) {
+    }
+    /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
+
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -233,13 +241,14 @@ void _Error_Handler(char *file, int line)
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t* file, uint32_t line)
-{ 
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+    /* USER CODE BEGIN 6 */
+    /* User can add his own implementation to report the file name and line number,
+       tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    /* USER CODE END 6 */
 }
+
 #endif /* USE_FULL_ASSERT */
 
 /**

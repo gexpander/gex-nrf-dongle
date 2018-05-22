@@ -74,14 +74,19 @@
 
 /* Private define ------------------------------------------------------------*/
 
-#define LED_Pin LL_GPIO_PIN_13
 #define LED_GPIO_Port GPIOC
-#define NRF_IRQ_Pin LL_GPIO_PIN_2
+#define LED1_Pin LL_GPIO_PIN_13
+#define LEDRX_Pin LL_GPIO_PIN_14
+#define LEDTX_Pin LL_GPIO_PIN_15
+
+#define NRF_IRQ_Pin LL_GPIO_PIN_1
 #define NRF_IRQ_GPIO_Port GPIOA
 #define NRF_CE_Pin LL_GPIO_PIN_3
 #define NRF_CE_GPIO_Port GPIOA
-#define NRF_NSS_Pin LL_GPIO_PIN_4
+#define NRF_NSS_Pin LL_GPIO_PIN_2
 #define NRF_NSS_GPIO_Port GPIOA
+#define RENUM_Pin LL_GPIO_PIN_0
+#define RENUM_GPIO_Port GPIOA
 
 /* ########################## Assert Selection ############################## */
 /**

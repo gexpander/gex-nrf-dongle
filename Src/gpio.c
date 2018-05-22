@@ -79,20 +79,23 @@ void MX_GPIO_Init(void)
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
 
   /**/
-  LL_GPIO_ResetOutputPin(LED_GPIO_Port, LED_Pin);
+  LL_GPIO_ResetOutputPin(LED_GPIO_Port, LED1_Pin);
+  LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDRX_Pin);
+  LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDTX_Pin);
+  LL_GPIO_SetOutputPin(RENUM_GPIO_Port, RENUM_Pin);
 
   /**/
 //  LL_GPIO_ResetOutputPin(GPIOA, NRF_CE_Pin|NRF_NSS_Pin);
 
   /**/
-  GPIO_InitStruct.Pin = LED_Pin;
+  GPIO_InitStruct.Pin = LED1_Pin|LEDRX_Pin|LEDTX_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = NRF_CE_Pin|NRF_NSS_Pin;
+  GPIO_InitStruct.Pin = NRF_CE_Pin|NRF_NSS_Pin|RENUM_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -100,10 +103,10 @@ void MX_GPIO_Init(void)
 
 #if 1
   /**/
-  LL_GPIO_AF_SetEXTISource(LL_GPIO_AF_EXTI_PORTA, LL_GPIO_AF_EXTI_LINE2);
+  LL_GPIO_AF_SetEXTISource(LL_GPIO_AF_EXTI_PORTA, LL_GPIO_AF_EXTI_LINE1); // IRQ on PA1
 
   /**/
-  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_2;
+  EXTI_InitStruct.Line_0_31 = LL_EXTI_LINE_1;
   EXTI_InitStruct.LineCommand = ENABLE;
   EXTI_InitStruct.Mode = LL_EXTI_MODE_IT;
   EXTI_InitStruct.Trigger = LL_EXTI_TRIGGER_FALLING;
