@@ -492,6 +492,7 @@ void NRF_Init(uint8_t pSpeed)
     NSS(1);
     CE(0);
 
+    dbg_nrf("Waiting for module start...");
     LL_mDelay(200);
 
     for (int i = 0; i < 6; i++) {
@@ -499,11 +500,12 @@ void NRF_Init(uint8_t pSpeed)
         nrf_pipe_enabled[i] = 0;
     }
 
+    dbg_nrf("init regs");
     // clear flags etc
     NRF_PowerDown();
     NRF_FlushRx();
     NRF_FlushTx();
-    NRF_WriteRegister(RG_STATUS, 0x70);
+    NRF_WriteRegister(RG_STATUS, 0x70); // this will fail to verify, that's OK
 
     NRF_WriteRegister(RG_CONFIG, ModeBits);
     NRF_WriteRegister(RG_SETUP_AW, 0b11);             // 5 byte addresses
@@ -511,7 +513,7 @@ void NRF_Init(uint8_t pSpeed)
     NRF_WriteRegister(RG_EN_RXADDR, 0x01); // disable all except 1 which we'll assign later
 
     NRF_WriteRegister(RG_SETUP_RETR, 0x18);        // 8 retries, 500 ms
-    NRF_WriteRegister(RG_RF_CH, 76);                // channel
+    NRF_WriteRegister(RG_RF_CH, NRF_CHANNEL);                // channel
 
     NRF_WriteRegister(RG_RF_SETUP, pSpeed);
 
@@ -521,4 +523,5 @@ void NRF_Init(uint8_t pSpeed)
 //    for (int i = 0; i < 6; i++) {
 //        NRF_WriteRegister(RG_RX_PW_P0+i, 32);      // Receive 32 byte packets - XXX this is probably not needed with dynamic length
 //    }
+    dbg_nrf("nrf init finished");
 }

@@ -48,8 +48,6 @@ static uint8_t  txmsg_payload[MAX_FRAME_LEN]; // equal buffer size in GEX
 static uint8_t txmsg_addr = 0;
 static uint8_t txmsg_cksum = 0;
 
-#define MAGIC_GW_COMMAND 0x47U // 'G'
-
 enum GW_CMD {
     CMD_GET_ID = 'i', // 105 - get network ID
     CMD_RESET = 'r', // reset the radio and network
@@ -147,57 +145,50 @@ void gw_handle_usb_out(uint8_t *buffer)
         PayloadParser pp = pp_start(buffer, 64, NULL);
 
         // handle binary commands for the gateway
+        switch (pp_u8(&pp)) {
+            case CMD_GET_ID:
+                respond_gw_id();
+                break;
 
-        // magic twice, one inverted - denotes a gateway command
-        const uint16_t magic1 = pp_u8(&pp);
-        const uint16_t magic2 = pp_u8(&pp);
-        if (magic1 == MAGIC_GW_COMMAND && magic2 == (0xFFU & (~MAGIC_GW_COMMAND))) {
-            // third byte is the command code
-            switch (pp_u8(&pp)) {
-                case CMD_GET_ID:
-                    respond_gw_id();
+            case CMD_RESET:
+                handle_cmd_reset();
+                break;
+
+            case CMD_ADD_NODES:
+                // payload is: u8-count, u8[] node addresses
+                handle_cmd_addnodes(&pp);
+                break;
+
+            case CMD_TXMSG:;
+                // u8-slave-addr, u16-len, u8-checksum
+                // the message is sent in the following frames.
+                uint8_t slave_addr = pp_u8(&pp);
+                uint16_t frame_len = pp_u16(&pp);
+                uint8_t cksum = pp_u8(&pp);
+
+                if (frame_len == 0 || frame_len > MAX_FRAME_LEN) {
+                    dbg("Frame too big!");
                     break;
+                }
 
-                case CMD_RESET:
-                    handle_cmd_reset();
-                    break;
+                LL_GPIO_SetOutputPin(LED_GPIO_Port, LEDTX_Pin);
+                led_tx_countdown = DATA_FLASH_TIME;
+                start_slave_cmd(slave_addr, frame_len, cksum);
+                dbg_nrf("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
+                cmd_state = CMD_STATE_TXMSG;
 
-                case CMD_ADD_NODES:
-                    // payload is: u8-count, u8[] node addresses
-                    handle_cmd_addnodes(&pp);
-                    break;
+                // handle the rest as payload
+                uint32_t len;
+                const uint8_t *tail = pp_tail(&pp, &len);
+                handle_txframe_chunk(tail, (uint16_t) len);
+                break;
 
-                case CMD_TXMSG:;
-                    // u8-slave-addr, u16-len, u8-checksum
-                    // the message is sent in the following frames.
-                    uint8_t slave_addr = pp_u8(&pp);
-                    uint16_t frame_len = pp_u16(&pp);
-                    uint8_t cksum = pp_u8(&pp);
-
-                    if (frame_len == 0 || frame_len > MAX_FRAME_LEN) {
-                        dbg("Frame too big!");
-                        break;
-                    }
-
-                    start_slave_cmd(slave_addr, frame_len, cksum);
-                    dbg_nrf("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
-                    cmd_state = CMD_STATE_TXMSG;
-
-                    // handle the rest as payload
-                    uint32_t len;
-                    const uint8_t *tail = pp_tail(&pp, &len);
-                    handle_txframe_chunk(tail, (uint16_t) len);
-                    break;
-
-                default:
-                    dbg("Bad cmd");
-            }
-        } else {
-            // Bad frame??
-            dbg("Bad USB frame, starts %x,%x", buffer[0],buffer[1]);
+            default:
+                dbg("Bad cmd");
         }
     }
     else if (cmd_state == CMD_STATE_TXMSG) {
+        led_tx_countdown = DATA_FLASH_TIME;
         handle_txframe_chunk(buffer, 64);
     }
 }
@@ -285,9 +276,9 @@ void gw_setup_radio(void)
     NRF_ModeRX(); // base state is RX
 }
 
-void EXTI2_IRQHandler(void)
+void EXTI1_IRQHandler(void)
 {
-    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_1);
 
     struct msg_data m;
     m.msg_type = MSG_TYPE_DATA;
@@ -298,6 +289,9 @@ void EXTI2_IRQHandler(void)
         dbg("IRQ but no msg!");
     }
     else {
+        LL_GPIO_SetOutputPin(LED_GPIO_Port, LEDRX_Pin);
+        led_rx_countdown = DATA_FLASH_TIME;
+
         dbg_nrf("Msg RXd from nordic!");
 
         m.dev_addr = NRF_PipeNum2Addr(pipenum);
