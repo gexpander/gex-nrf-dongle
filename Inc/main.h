@@ -71,6 +71,9 @@
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
+extern uint32_t led_tx_countdown;
+extern uint32_t led_rx_countdown;
+#define DATA_FLASH_TIME 5000
 
 /* Private define ------------------------------------------------------------*/
 
@@ -87,6 +90,8 @@
 #define NRF_NSS_GPIO_Port GPIOA
 #define RENUM_Pin LL_GPIO_PIN_0
 #define RENUM_GPIO_Port GPIOA
+#define NRF_RESET_Pin LL_GPIO_PIN_9
+#define NRF_RESET_GPIO_Port GPIOB
 
 /* ########################## Assert Selection ############################## */
 /**

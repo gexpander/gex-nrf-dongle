@@ -61,6 +61,9 @@
 
 /* USER CODE BEGIN Includes */
 
+uint32_t led_tx_countdown = 0;
+uint32_t led_rx_countdown = 0;
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -82,7 +85,7 @@ void SystemClock_Config(void);
 
 /* USER CODE END 0 */
 
-extern void EXTI2_IRQHandler(void);
+extern void EXTI1_IRQHandler(void);
 
 /**
   * @brief  The application entry point.
@@ -113,6 +116,7 @@ int main(void)
 
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOC);
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOD);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
     LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
 
     /* Initialize all configured peripherals */
@@ -123,6 +127,8 @@ int main(void)
     MX_USART1_UART_Init();
     /* USER CODE BEGIN 2 */
 
+    // give juice to the nrf module
+    LL_GPIO_ResetOutputPin(NRF_RESET_GPIO_Port, NRF_RESET_Pin);
     /* USER CODE END 2 */
 
     gw_setup_radio();
@@ -136,7 +142,7 @@ int main(void)
     dbg("Main loop starts.");
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    int cnt = 0;
+    uint32_t cnt = 0;
     uint8_t buff[MQ_SLOT_LEN];
 
     while (1) {
@@ -149,13 +155,22 @@ int main(void)
             cnt = 0;
         }
 
+        if (led_tx_countdown > 0) {
+            if (--led_tx_countdown == 0) {
+                LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDTX_Pin);
+            }
+        }
+
+        if (led_rx_countdown > 0) {
+            if (--led_rx_countdown == 0) {
+                LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDRX_Pin);
+            }
+        }
+
         if (mq_can_read(&usb_inq)) {
             if (!usb_tx_busy) {
                 mq_read(&usb_inq, buff);
                 CDC_Transmit_FS(buff, MQ_SLOT_LEN);
-
-                // blinking - maybe this will work .. not sure
-                LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDRX_Pin);
             }
         }
     }

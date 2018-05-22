@@ -6,7 +6,7 @@
 #define GEX_NRF_NRF_H
 
 /*
- * nordic.h
+ * nordic.h - adapted from http://barefootelectronics.com/NRF24L01.aspx
  *
  * Created:12/16/2013 3:36:04 PM
  *  Author: Tom
@@ -21,8 +21,11 @@
 
 #include "main.h"
 
+#define NRF_CHANNEL 76
+
+
 #define dbg_nrf(...) do{}while(0)
-//#define dbg_nrf(...) dbg(##__VA_ARGS__)
+//#define dbg_nrf dbg
 
 // Initialize SPI and the Nordic
 

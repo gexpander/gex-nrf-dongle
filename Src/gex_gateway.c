@@ -135,7 +135,6 @@ void handle_txframe_chunk(const uint8_t *buffer, uint16_t size)
             }
         }
 
-        LL_GPIO_ResetOutputPin(LED_GPIO_Port, LEDTX_Pin);
         cmd_state = CMD_STATE_IDLE;
     }
 }
@@ -173,6 +172,7 @@ void gw_handle_usb_out(uint8_t *buffer)
                 }
 
                 LL_GPIO_SetOutputPin(LED_GPIO_Port, LEDTX_Pin);
+                led_tx_countdown = DATA_FLASH_TIME;
                 start_slave_cmd(slave_addr, frame_len, cksum);
                 dbg_nrf("Collecting frame for slave %02x: %d bytes", (int)slave_addr, (int)frame_len);
                 cmd_state = CMD_STATE_TXMSG;
@@ -188,7 +188,7 @@ void gw_handle_usb_out(uint8_t *buffer)
         }
     }
     else if (cmd_state == CMD_STATE_TXMSG) {
-        LL_GPIO_SetOutputPin(LED_GPIO_Port, LEDTX_Pin);
+        led_tx_countdown = DATA_FLASH_TIME;
         handle_txframe_chunk(buffer, 64);
     }
 }
@@ -276,10 +276,9 @@ void gw_setup_radio(void)
     NRF_ModeRX(); // base state is RX
 }
 
-void EXTI2_IRQHandler(void)
+void EXTI1_IRQHandler(void)
 {
-    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_2);
-    LL_GPIO_SetOutputPin(LED_GPIO_Port, LEDRX_Pin);
+    LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_1);
 
     struct msg_data m;
     m.msg_type = MSG_TYPE_DATA;
@@ -290,6 +289,9 @@ void EXTI2_IRQHandler(void)
         dbg("IRQ but no msg!");
     }
     else {
+        LL_GPIO_SetOutputPin(LED_GPIO_Port, LEDRX_Pin);
+        led_rx_countdown = DATA_FLASH_TIME;
+
         dbg_nrf("Msg RXd from nordic!");
 
         m.dev_addr = NRF_PipeNum2Addr(pipenum);
