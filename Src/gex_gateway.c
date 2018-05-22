@@ -71,6 +71,8 @@ void start_slave_cmd(uint8_t slave_addr, uint16_t frame_len, uint8_t cksum)
     txmsg_cksum = cksum;
 }
 
+#define MAX_RETRY 20
+
 void handle_txframe_chunk(const uint8_t *buffer, uint16_t size)
 {
     uint32_t wanted = MIN(txmsg_len - txmsg_collected, size);
@@ -98,11 +100,34 @@ void handle_txframe_chunk(const uint8_t *buffer, uint16_t size)
                 uint32_t remain = txmsg_len;
                 for (int i = 0; i <= txmsg_len/32; i++) {
                     uint8_t chunk = (uint8_t) MIN(remain, 32);
-                    bool suc = NRF_SendPacket(pipe, &txmsg_payload[i*32], chunk);
+
+                    bool suc = false;
+                    uint16_t delay = 1;
+
+                    // repeated tx attempts
+                    for (int j = 0; j < MAX_RETRY; j++) {
+                        suc = NRF_SendPacket(pipe, &txmsg_payload[i*32], chunk); // use the pipe to retrieve the address
+                        if (!suc) {
+                            dbg_nrf("Retry");
+                            LL_mDelay(delay);
+                            delay += 2; // longer delay next time
+                        } else {
+                            break;
+                        }
+                    } // TODO it sometimes gets through after a retry but the communication stalls??
+                    if(delay != 1 && suc) {
+                        dbg_nrf("  Succ after retry");
+                    }
+
                     remain -= chunk;
 
                     if (!suc) {
                         dbg("Sending failed, discard rest");
+
+                        NRF_PowerDown();
+                        NRF_FlushRx();
+                        NRF_FlushTx();
+                        NRF_ModeRX();
                         break; // skip rest of the frame
                     }
                 }
@@ -179,7 +204,15 @@ void gw_handle_usb_out(uint8_t *buffer)
 
 void handle_cmd_reset(void)
 {
+//    mq_reset(&usb_inq);
+    // TODO this may be causing problems??
+
     NRF_ResetPipes();
+
+    NRF_PowerDown();
+    NRF_FlushRx();
+    NRF_FlushTx();
+    NRF_ModeRX();
 }
 
 void handle_cmd_addnodes(PayloadParser *pp)

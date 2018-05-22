@@ -80,6 +80,16 @@ uint8_t NRF_IsModeTX(void);
 uint8_t NRF_IsModeRx(void);
 
 /**
+ * Flush Rx fifo
+ */
+void NRF_FlushRx(void);
+
+/**
+ * Flush Tx fifo
+ */
+void NRF_FlushTx(void);
+
+/**
  * Add a pipe to the next free slot
  *
  * @param AddrByte - address byte of the peer

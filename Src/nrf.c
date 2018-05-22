@@ -387,9 +387,7 @@ uint8_t NRF_ReceivePacket(uint8_t *Packet, uint8_t *PipeNum)
     }
 
     if (pw > 32) {
-        CHIPSELECT {
-            spi(CMD_FLUSH_RX);
-        }
+        NRF_FlushRx();
         pw = 0;
     } else {
         // Read the reception pipe number
@@ -430,9 +428,7 @@ bool NRF_SendPacket(uint8_t PipeNum, const uint8_t *Packet, uint8_t Length)
     NRF_ModeTX();        // Make sure in TX mode
     NRF_SetTxAddress(nrf_pipe_addr[PipeNum]); // this sets the Tx addr and also pipe 0 addr for ACK
 
-    CHIPSELECT {
-        spi(CMD_FLUSH_TX);
-    };
+    NRF_FlushTx();
 
     CHIPSELECT {
         spi(CMD_WR_TX_PLD);
@@ -468,11 +464,25 @@ bool NRF_SendPacket(uint8_t PipeNum, const uint8_t *Packet, uint8_t Length)
 
 void NRF_ResetPipes(void)
 {
-    NRF_WriteRegister(RG_EN_RXADDR, 0); // disable all pipes
+    NRF_WriteRegister(RG_EN_RXADDR, 1); // disable all pipes
 
     for (int i = 0; i < 6; i++) {
         nrf_pipe_addr[i] = 0;
         nrf_pipe_enabled[i] = 0;
+    }
+}
+
+void NRF_FlushRx(void)
+{
+    CHIPSELECT {
+        spi(CMD_FLUSH_RX);
+    }
+}
+
+void NRF_FlushTx(void)
+{
+    CHIPSELECT {
+        spi(CMD_FLUSH_TX);
     }
 }
 
@@ -491,17 +501,17 @@ void NRF_Init(uint8_t pSpeed)
 
     // clear flags etc
     NRF_PowerDown();
-    CHIPSELECT { spi(CMD_FLUSH_RX); }
-    CHIPSELECT { spi(CMD_FLUSH_TX); }
+    NRF_FlushRx();
+    NRF_FlushTx();
     NRF_WriteRegister(RG_STATUS, 0x70);
 
     NRF_WriteRegister(RG_CONFIG, ModeBits);
     NRF_WriteRegister(RG_SETUP_AW, 0b11);             // 5 byte addresses
 
-    NRF_WriteRegister(RG_EN_RXADDR, 0x00); // disable all
+    NRF_WriteRegister(RG_EN_RXADDR, 0x01); // disable all except 1 which we'll assign later
 
     NRF_WriteRegister(RG_SETUP_RETR, 0x18);        // 8 retries, 500 ms
-    NRF_WriteRegister(RG_RF_CH, 7);                // channel 2 NO HIGHER THAN 83 in USA!
+    NRF_WriteRegister(RG_RF_CH, 76);                // channel
 
     NRF_WriteRegister(RG_RF_SETUP, pSpeed);
 

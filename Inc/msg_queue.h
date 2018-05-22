@@ -23,6 +23,8 @@ typedef struct {
 
 extern MQueue usb_inq;
 
+void mq_reset(MQueue *mq);
+
 void mq_init(MQueue *mq);
 
 bool mq_can_post(MQueue *mq);
